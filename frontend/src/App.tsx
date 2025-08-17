@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import BookSuggestions, { BookSuggestionItem } from "./components/BookSuggestions";
 
 const API_URL = "http://localhost:3000"; // ajuste a porta se necessário
 const HERO_BG = "https://SEU-LINK-DE-IMAGEM.jpg"; // ⬅️ Troque pela URL da sua imagem
@@ -25,15 +26,7 @@ type Livro = {
   nota?: number;
 };
 
-type BookSuggestion = {
-  id: string;
-  title: string;
-  authors: string[];
-  thumbnail: string | null;
-  source: "google" | "openlibrary";
-};
-
-// ======== CLASSES REUTILIZÁVEIS PARA BOTÕES ========
+// ======== CLASSES REUTILIZÁVEIS PARA BOTÕES (usadas junto com Tailwind) ========
 const BTN_BASE =
   "px-5 py-2 rounded-full font-bold transition shadow-[0_6px_14px_rgba(0,0,0,0.20)] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-white/40";
 
@@ -47,7 +40,7 @@ const BTN_CANCEL =
   `${BTN_BASE} !text-white bg-gray-500/80 hover:bg-gray-600`;
 
 function App() {
-  // Formulário de cadastro de livros
+  // ------------------ Biblioteca: formulário ------------------
   const [form, setForm] = useState({
     titulo: "",
     autor: "",
@@ -56,34 +49,38 @@ function App() {
     status_leitura: "não lido",
     resenha: "",
     nota: "",
-    capa_url: ""
+    capa_url: "",
   });
 
-  // Busca de capa (sugestões)
+  // Estado para abrir/fechar sugestões e query
   const [bookQuery, setBookQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<BookSuggestion[]>([]);
-  const [loadingCovers, setLoadingCovers] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [openSuggestions, setOpenSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement | null>(null);
 
-  // Formulário da wishlist
+  // ------------------ Wishlist: formulário ------------------
   const [wishlistForm, setWishlistForm] = useState({
     titulo: "",
     autor: "",
     capa_url: "",
-    observacao: ""
+    observacao: "",
   });
 
+  // Estado para abrir/fechar sugestões e query
+  const [bookQueryW, setBookQueryW] = useState("");
+  const [openSuggestionsW, setOpenSuggestionsW] = useState(false);
+  const suggestionsRefW = useRef<HTMLDivElement | null>(null);
+
+  // ------------------ Dados ------------------
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [biblioteca, setBiblioteca] = useState<Livro[]>([]);
   const [loadingWishlist, setLoadingWishlist] = useState(false);
   const [loadingBiblioteca, setLoadingBiblioteca] = useState(false);
 
-  // mostrar/ocultar formulários
+  // Mostrar/ocultar formulários
   const [showForm, setShowForm] = useState(false);
   const [showWishlistForm, setShowWishlistForm] = useState(false);
 
-  // Carregar dados
+  // ------------------ Carregar dados ------------------
   useEffect(() => {
     fetchWishlist();
     fetchBiblioteca();
@@ -115,6 +112,7 @@ function App() {
     }
   };
 
+  // ------------------ Handlers Biblioteca ------------------
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -130,8 +128,8 @@ function App() {
         body: JSON.stringify({
           ...form,
           ano_publicacao: form.ano_publicacao ? Number(form.ano_publicacao) : null,
-          nota: form.nota ? Number(form.nota) : null
-        })
+          nota: form.nota ? Number(form.nota) : null,
+        }),
       });
       if (!response.ok) throw new Error("Erro ao cadastrar livro");
 
@@ -144,19 +142,18 @@ function App() {
         status_leitura: "não lido",
         resenha: "",
         nota: "",
-        capa_url: ""
+        capa_url: "",
       });
       fetchBiblioteca();
       setShowForm(false);
       setBookQuery("");
-      setSuggestions([]);
-      setShowSuggestions(false);
+      setOpenSuggestions(false);
     } catch {
       alert("Erro ao cadastrar livro!");
     }
   };
 
-  // Wishlist
+  // ------------------ Handlers Wishlist ------------------
   const handleWishlistChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -169,12 +166,14 @@ function App() {
       const response = await fetch(`${API_URL}/wishlist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(wishlistForm)
+        body: JSON.stringify(wishlistForm),
       });
       if (!response.ok) throw new Error();
       setWishlistForm({ titulo: "", autor: "", capa_url: "", observacao: "" });
       fetchWishlist();
       setShowWishlistForm(false);
+      setBookQueryW("");
+      setOpenSuggestionsW(false);
     } catch {
       alert("Erro ao adicionar à wishlist!");
     }
@@ -193,7 +192,7 @@ function App() {
   const moveToBiblioteca = async (id: number) => {
     try {
       const response = await fetch(`${API_URL}/wishlist/${id}/mover-para-biblioteca`, {
-        method: "POST"
+        method: "POST",
       });
       if (!response.ok) throw new Error();
       fetchWishlist();
@@ -203,91 +202,28 @@ function App() {
     }
   };
 
-  // ====== BUSCA AUTOMÁTICA DE CAPAS (debounce + Google Books + Open Library fallback) ======
-  useEffect(() => {
-    const handler = setTimeout(async () => {
-      const q = bookQuery.trim();
-      if (q.length < 3) {
-        setSuggestions([]);
-        setShowSuggestions(false);
-        return;
-      }
-
-      setLoadingCovers(true);
-      try {
-        // 1) Google Books
-        const g = await fetch(
-          `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(
-            q
-          )}&maxResults=8&printType=books&projection=lite`
-        ).then(r => r.json());
-
-        let items: BookSuggestion[] = (g.items || []).map((it: any) => ({
-          id: it.id,
-          title: it.volumeInfo?.title || "Sem título",
-          authors: it.volumeInfo?.authors || [],
-          thumbnail:
-            it.volumeInfo?.imageLinks?.thumbnail?.replace("http://", "https://") ||
-            it.volumeInfo?.imageLinks?.smallThumbnail?.replace("http://", "https://") ||
-            null,
-          source: "google",
-        }));
-
-        // 2) Fallback Open Library
-        if (!items.length) {
-          const o = await fetch(
-            `https://openlibrary.org/search.json?title=${encodeURIComponent(q)}&limit=8`
-          ).then(r => r.json());
-
-          items = (o.docs || []).map((d: any) => {
-            const coverId = d.cover_i;
-            return {
-              id: d.key || String(Math.random()),
-              title: d.title || "Sem título",
-              authors: d.author_name || [],
-              thumbnail: coverId
-                ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`
-                : null,
-              source: "openlibrary",
-            } as BookSuggestion;
-          });
-        }
-
-        setSuggestions(items);
-        setShowSuggestions(true);
-      } catch (e) {
-        console.error(e);
-        setSuggestions([]);
-        setShowSuggestions(false);
-      } finally {
-        setLoadingCovers(false);
-      }
-    }, 400); // debounce 400ms
-
-    return () => clearTimeout(handler);
-  }, [bookQuery]);
-
-  const applySuggestion = (sug: BookSuggestion) => {
-    setForm(prev => ({
+  // ------------------ Aplicar sugestões ------------------
+  const applySuggestion = (sug: BookSuggestionItem) => {
+    setForm((prev) => ({
       ...prev,
       capa_url: sug.thumbnail || prev.capa_url,
-      autor: prev.autor || (sug.authors?.length ? sug.authors.join(", ") : prev.autor),
+      autor:
+        prev.autor || (sug.authors?.length ? sug.authors.join(", ") : prev.autor),
     }));
-    setShowSuggestions(false);
+    setOpenSuggestions(false);
   };
 
-  // clique fora fecha o dropdown de sugestões
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
+  const applySuggestionWishlist = (sug: BookSuggestionItem) => {
+    setWishlistForm((prev) => ({
+      ...prev,
+      capa_url: sug.thumbnail || prev.capa_url,
+      autor:
+        prev.autor || (sug.authors?.length ? sug.authors.join(", ") : prev.autor),
+    }));
+    setOpenSuggestionsW(false);
+  };
 
-  // ====== RELATÓRIOS PDF (jsPDF + autoTable) ======
+  // ------------------ RELATÓRIOS PDF ------------------
   const formatDateTime = () => {
     const d = new Date();
     return d.toLocaleString();
@@ -298,45 +234,39 @@ function App() {
     const marginX = 48;
     const marginY = 56;
 
-    // Título
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.text("Relatório - Meus Livros (BiblioMe)", marginX, marginY);
 
-    // Subtítulo
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(`Gerado em ${formatDateTime()}`, marginX, marginY + 16);
     doc.setTextColor(0);
 
-    // Tabela
-    const rows = biblioteca.map((b) => ([
+    const rows = biblioteca.map((b) => [
       b.titulo || "-",
       b.autor || "-",
       b.genero || "-",
       b.ano_publicacao ?? "-",
       b.status_leitura || "-",
-      (b.nota ?? "-").toString()
-    ]));
+      (b.nota ?? "-").toString(),
+    ]);
 
     autoTable(doc, {
       startY: marginY + 36,
-      head: [[
-        "Título", "Autor", "Gênero", "Ano", "Status", "Nota"
-      ]],
+      head: [["Título", "Autor", "Gênero", "Ano", "Status", "Nota"]],
       body: rows,
       styles: { fontSize: 10, cellPadding: 6 },
       headStyles: { fillColor: [212, 63, 107] }, // #d43f6b
       alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: marginX, right: marginX },
-      didDrawPage: (data) => {
-        // Rodapé
+      didDrawPage: () => {
         const str = "BiblioMe • Relatório de Biblioteca";
         doc.setFontSize(9);
         doc.setTextColor(120);
         doc.text(str, marginX, doc.internal.pageSize.getHeight() - 20);
-      }
+      },
     });
 
     doc.save("relatorio_biblioteca.pdf");
@@ -347,46 +277,38 @@ function App() {
     const marginX = 48;
     const marginY = 56;
 
-    // Título
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.text("Relatório - Wishlist (BiblioMe)", marginX, marginY);
 
-    // Subtítulo
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(`Gerado em ${formatDateTime()}`, marginX, marginY + 16);
     doc.setTextColor(0);
 
-    // Tabela
-    const rows = wishlist.map((w) => ([
-      w.titulo || "-",
-      w.autor || "-",
-      w.observacao || "-"
-    ]));
+    const rows = wishlist.map((w) => [w.titulo || "-", w.autor || "-", w.observacao || "-"]);
 
     autoTable(doc, {
       startY: marginY + 36,
-      head: [[
-        "Título", "Autor", "Observação"
-      ]],
+      head: [["Título", "Autor", "Observação"]],
       body: rows,
       styles: { fontSize: 10, cellPadding: 6 },
-      headStyles: { fillColor: [212, 63, 107] }, // #d43f6b
+      headStyles: { fillColor: [212, 63, 107] },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: marginX, right: marginX },
-      didDrawPage: (data) => {
+      didDrawPage: () => {
         const str = "BiblioMe • Relatório de Wishlist";
         doc.setFontSize(9);
         doc.setTextColor(120);
         doc.text(str, marginX, doc.internal.pageSize.getHeight() - 20);
-      }
+      },
     });
 
     doc.save("relatorio_wishlist.pdf");
   };
 
+  // ------------------ UI ------------------
   return (
     <div className="min-h-screen flex flex-col">
       {/* HERO com imagem e overlay */}
@@ -396,13 +318,10 @@ function App() {
           backgroundImage: `url(${HERO_BG})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          backgroundRepeat: "no-repeat"
+          backgroundRepeat: "no-repeat",
         }}
       >
-        {/* overlay para contraste */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60" />
-
-        {/* glass card */}
         <div className="relative z-10 max-w-3xl w-full rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md shadow-xl p-6">
           <h1 className="logo m-0">
             Biblio<span>Me</span>
@@ -422,7 +341,7 @@ function App() {
 
       {/* CONTEÚDO */}
       <main className="flex-1 bg-gray-100 px-4 sm:px-6 pb-12">
-        {/* Formulário de livros */}
+        {/* ------- Formulário Biblioteca ------- */}
         {showForm && (
           <form
             onSubmit={handleSubmit}
@@ -436,7 +355,7 @@ function App() {
               style={{
                 background:
                   "radial-gradient(120% 90% at 50% 10%, rgba(0,0,0,0.35), rgba(0,0,0,0.55))," +
-                  "linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.40) 40%, rgba(0,0,0,0.65))"
+                  "linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.40) 40%, rgba(0,0,0,0.65))",
               }}
             />
 
@@ -460,8 +379,9 @@ function App() {
                   onChange={(e) => {
                     handleChange(e);
                     setBookQuery(e.target.value);
+                    setOpenSuggestions(true);
                   }}
-                  onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                  onFocus={() => setOpenSuggestions(true)}
                   required
                   placeholder="Ex.: Dom Casmurro"
                   className="w-full rounded-xl border border-white/25 bg-white/10 px-3 py-2
@@ -469,61 +389,14 @@ function App() {
                              focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
                 />
 
-                {showSuggestions && (
-                  <div className="absolute left-0 right-0 mt-2 z-20 rounded-xl overflow-hidden
-                                  border border-white/20 bg-black/70 backdrop-blur-md shadow-2xl">
-                    {loadingCovers && (
-                      <div className="px-4 py-3 text-sm text-white/80">Buscando capas…</div>
-                    )}
-
-                    {!loadingCovers && suggestions.length === 0 && (
-                      <div className="px-4 py-3 text-sm text-white/80">Nenhuma capa encontrada.</div>
-                    )}
-
-                    {!loadingCovers && suggestions.length > 0 && (
-                      <ul className="max-h-72 overflow-auto divide-y divide-white/10">
-                        {suggestions.map((s) => (
-                          <li
-                            key={s.id}
-                            className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer"
-                            onClick={() => applySuggestion(s)}
-                          >
-                            {s.thumbnail ? (
-                              <img
-                                src={s.thumbnail}
-                                alt=""
-                                className="w-10 h-14 object-cover rounded border border-white/20"
-                              />
-                            ) : (
-                              <div className="w-10 h-14 rounded bg-white/10 border border-white/20 flex items-center justify-center text-xs text-white/60">
-                                Sem capa
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-white truncate">{s.title}</div>
-                              <div className="text-xs text-white/80 truncate">
-                                {s.authors?.length ? s.authors.join(", ") : "Autor desconhecido"}
-                              </div>
-                            </div>
-                            <span className="text-[10px] uppercase tracking-wide text-white/60">
-                              {s.source === "google" ? "Google" : "OpenLib"}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <div className="p-2 text-right bg-black/40">
-                      <button
-                        type="button"
-                        className="text-xs font-bold px-2 py-1 rounded bg-white/10 border border-white/20 hover:bg-white/20"
-                        onClick={() => setShowSuggestions(false)}
-                      >
-                        Fechar
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <BookSuggestions
+                  query={bookQuery}
+                  open={openSuggestions}
+                  onPick={applySuggestion}
+                  onClose={() => setOpenSuggestions(false)}
+                  anchorRef={suggestionsRef}
+                  variant="dark"
+                />
               </div>
 
               {/* Autor */}
@@ -642,7 +515,7 @@ function App() {
                   <div className="mt-3">
                     <img
                       src={form.capa_url}
-                      onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+                      onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
                       alt="Prévia da capa"
                       className="h-40 rounded-lg object-cover border border-white/25 shadow"
                     />
@@ -685,7 +558,7 @@ function App() {
           </form>
         )}
 
-        {/* ====== Ações Biblioteca (Relatório PDF) ====== */}
+        {/* ------- Biblioteca (lista + PDF) ------- */}
         <section id="meus-livros" className="w-full max-w-2xl mx-auto mt-10">
           <div className="flex items-center justify-between mb-3">
             <h2 className="titulo-section m-0">Meus Livros</h2>
@@ -722,8 +595,8 @@ function App() {
           )}
         </section>
 
-        {/* ====== Wishlist com formulário + Relatório PDF ====== */}
-        <section id="wishlist" className="w-full max-w-xl mx-auto mt-10">
+        {/* ------- Wishlist (form + lista + PDF) ------- */}
+        <section id="wishlist" className="w-full max-w-xl mx_auto mt-10">
           <div className="flex items-center justify-between mb-3">
             <h2 className="titulo-section m-0">Wishlist</h2>
             <button className={BTN_SECONDARY} onClick={generateWishlistPDF}>
@@ -735,13 +608,14 @@ function App() {
             <form
               onSubmit={handleWishlistSubmit}
               className="form-mask relative z-10 mb-6 w-full
-                 rounded-2l border border-white/20 bg-transparent backdrop-blur-md
+                 rounded-2xl border border-white/20 bg-transparent backdrop-blur-md
                  shadow-xl p-5 text-white overflow-hidden"
             >
               <h3 className="text-lg font-bold mb-3">Adicionar à Wishlist</h3>
 
               <div className="space-y-4">
-                <div>
+                {/* Título com sugestões */}
+                <div className="relative" ref={suggestionsRefW}>
                   <label htmlFor="w_titulo" className="block text-sm font-semibold text-pink-200 mb-1">
                     Título *
                   </label>
@@ -749,12 +623,26 @@ function App() {
                     id="w_titulo"
                     name="titulo"
                     value={wishlistForm.titulo}
-                    onChange={handleWishlistChange}
+                    onChange={(e) => {
+                      handleWishlistChange(e);
+                      setBookQueryW(e.target.value);
+                      setOpenSuggestionsW(true);
+                    }}
+                    onFocus={() => setOpenSuggestionsW(true)}
                     required
                     placeholder="Ex.: A Biblioteca da Meia-Noite"
                     className="w-full rounded-xl border border-white/25 bg-white/10 px-3 py-2
                        text-white placeholder-white/70 shadow-sm focus:outline-none
                        focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                  />
+
+                  <BookSuggestions
+                    query={bookQueryW}
+                    open={openSuggestionsW}
+                    onPick={applySuggestionWishlist}
+                    onClose={() => setOpenSuggestionsW(false)}
+                    anchorRef={suggestionsRefW}
+                    variant="dark"
                   />
                 </div>
 
@@ -812,14 +700,15 @@ function App() {
                 <button
                   type="button"
                   className="btn-gray"
-                  onClick={() => setShowWishlistForm(false)}
+                  onClick={() => {
+                    setShowWishlistForm(false);
+                    setBookQueryW("");
+                    setOpenSuggestionsW(false);
+                  }}
                 >
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="btn-pink"
-                >
+                <button type="submit" className="btn-pink">
                   Salvar
                 </button>
               </div>
