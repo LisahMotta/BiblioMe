@@ -1,0 +1,266 @@
+/* ======== FUNDO & OVERLAY ======== */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  /* tiramos o flex/center do body para não “forçar” tudo pro meio */
+  background-image: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1500&q=80');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 20, 10, 0.7); /* máscara escura */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ======== CONTEÚDO ROOT ======== */
+#root {
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  /* criamos um espaçamento superior fluido para “descolar” o hero do topo */
+  padding-top: clamp(12vh, 18vh, 22vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centraliza logo e subtítulo no eixo horizontal */
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* ======== LOGO ======== */
+.logo {
+  font-family: 'Playfair Display', serif; /* Parte clássica */
+  font-weight: 700;
+  font-size: clamp(2.6rem, 7vw, 5rem); /* responsivo */
+  text-align: center;
+  color: #fff;
+  margin: 0 0 12px 0; /* sem margem negativa */
+  letter-spacing: 1.5px;
+  position: relative;
+  width: 100%;
+  text-shadow: 0 3px 12px rgba(0,0,0,.45); /* melhora contraste no fundo */
+}
+
+/* “Me” caligráfico com destaque e detalhe sutil */
+.logo span {
+  font-family: 'Great Vibes', cursive; /* Parte caligráfica */
+  font-weight: 400;
+  color: #d43f6b; /* destaque com cor */
+  margin-left: 4px;
+  position: relative;
+}
+
+.logo span::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: -6px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #d43f6b, transparent);
+  border-radius: 999px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.25));
+}
+
+/* ======== SUBTÍTULO ======== */
+.subtitulo {
+  text-align: center;
+  color: #fff;
+  font-size: clamp(1rem, 2.2vw, 1.5rem);
+  margin: 6px 0 24px 0;
+  text-shadow: 2px 4px 12px #222, 0 0 8px #000;
+  font-weight: 500;
+  letter-spacing: 1px;
+  opacity: 1;
+  max-width: 900px;
+  background: rgba(30, 20, 10, 0.32);
+  border-radius: 8px;
+  padding: 6px 18px;
+  display: inline-block;
+}
+
+/* ======== AJUSTES DE RESPONSIVIDADE ======== */
+@media (max-width: 480px) {
+  #root {
+    padding-top: 16vh; /* sobe um pouco em telas pequenas */
+  }
+  .logo span::after {
+    bottom: -4px;
+  }
+}
+
+@media (min-width: 1280px) {
+  #root {
+    padding-top: 20vh; /* afasta um pouco mais em telas grandes */
+  }
+}
+/* ========== NAVBAR (topo) ========== */
+.navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 12px 24px;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  background: linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,0));
+}
+
+.navbar nav {
+  display: flex;
+  gap: 24px;               /* espaço entre os links */
+}
+
+.navbar a {
+  color: #dfe7ff;          /* deixa branco-azulado (tira o azul padrão) */
+  text-decoration: none;
+  font-weight: 600;
+  opacity: .9;
+  transition: opacity .2s ease;
+}
+.navbar a:hover { opacity: 1; text-decoration: underline; }
+
+/* ========== HERO: logo + subtítulo + botões ========== */
+/* Se quiser que tudo desça um pouco para não grudar no topo */
+#root { padding-top: clamp(12vh, 18vh, 22vh); }
+
+.subtitulo {
+  text-align: center;
+  color: #f3f3f3;
+  font-size: clamp(1rem, 2.2vw, 1.5rem);
+  margin: 6px 0 16px 0;    /* aproxima dos botões */
+  text-shadow: 1px 2px 8px #222;
+  font-weight: 400;
+  letter-spacing: .8px;
+  opacity: .95;            /* mais legível */
+}
+
+/* container dos botões abaixo do título */
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* se seus botões não tiverem classe, pode aplicar diretamente: */
+
+/* detalhe no "Me" (mantém seu estilo) */
+.logo span::after {
+  content: "";
+  position: absolute;
+  left: -4px; right: -4px; bottom: -6px; height: 2px;
+  background: linear-gradient(90deg, transparent, #d43f6b, transparent);
+  border-radius: 999px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.25));
+}
+.titulo-section {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(90deg, #d43f6b, #ff8ac5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.btn-rosa {
+  background: #d43f6b;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(212, 63, 107, 0.35);
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.btn-rosa:hover {
+  background: #ff5a8a;
+  transform: translateY(-2px);
+}
+.actions button {
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.2);
+  /* sem background / color aqui */
+}
+/* Máscara escura + blur por trás do formulário */
+/* --- Container com máscara leve e blur --- */
+.form-mask {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+.form-mask::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /* >>> máscara mais CLARA e suave <<< */
+  background:
+    radial-gradient(120% 90% at 50% 10%, rgba(0,0,0,0.25), rgba(0,0,0,0.45)),
+    linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.55));
+  backdrop-filter: blur(6px);
+}
+
+/* Texto forte e legível */
+.form-mask, .form-mask * {
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+
+/* Campos (inputs/select/textarea) com fundo translúcido claro */
+.form-mask input,
+.form-mask select,
+.form-mask textarea {
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.28);
+  color: #fff;
+}
+
+.form-mask input::placeholder,
+.form-mask textarea::placeholder {
+  color: rgba(255,255,255,0.75);
+}
+
+/* Foco rosa do BiblioMe */
+.form-mask input:focus,
+.form-mask select:focus,
+.form-mask textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #ff8ac5;
+  border-color: #d43f6b;
+}
+
+/* --- Botões dentro do form (garante que não "sumam") --- */
+.form-mask .btn-pink {
+  background: #d43f6b;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 10px 16px;
+  box-shadow: 0 6px 14px rgba(212,63,107,.40);
+  transition: transform .15s ease, background .15s ease;
+}
+.form-mask .btn-pink:hover { background: #ff5a8a; transform: translateY(-2px); }
+
+.form-mask .btn-gray {
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255,255,255,0.35);
+  backdrop-filter: blur(4px);
+  transition: transform .15s ease, background .15s ease;
+}
+.form-mask .btn-gray:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }

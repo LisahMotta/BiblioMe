@@ -1,0 +1,102 @@
+/* Fonts para logo clássico + caligráfico */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Great+Vibes&display=swap');
+
+/* Reset mínimo */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; color: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+
+/* Navbar discreta no topo */
+.navbar {
+  position: fixed; top: 0; right: 0; left: 0;
+  padding: 12px 24px; z-index: 5;
+  display: flex; justify-content: flex-end;
+  background: linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,0));
+}
+.navbar a {
+  color: #dfe7ff; text-decoration: none; margin-left: 20px; font-weight: 600;
+  opacity: .9; transition: opacity .2s ease;
+}
+.navbar a:hover { opacity: 1; text-decoration: underline; }
+
+/* Hero com imagem + overlay para contraste */
+.hero {
+  position: relative;
+  min-height: 75vh;
+  display: grid;
+  place-items: center;
+  padding: 88px 16px 48px; /* espaço por causa da navbar */
+  background: url('/hero-bg.jpg') center / cover no-repeat fixed;
+}
+.hero::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(80% 60% at 50% 20%, rgba(0,0,0,.25), transparent 60%),
+    linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,.15) 40%, rgba(0,0,0,.55));
+}
+
+/* Cartão “glass” central */
+.glass {
+  position: relative; z-index: 2;
+  padding: 28px 28px 32px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.06);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  max-width: 720px; width: 92%;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+/* Logo: Biblio (clássico) + Me (caligráfico) */
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  letter-spacing: 1px;
+  text-shadow: 0 3px 10px rgba(0,0,0,.4);
+  margin: 0 0 6px;
+}
+.logo span {
+  font-family: 'Great Vibes', cursive;
+  font-weight: 400;
+  color: #ff5a8a;
+  margin-left: 4px;
+  position: relative;
+}
+.logo span::after {
+  content: "";
+  position: absolute; left: -4px; right: -4px; bottom: -6px; height: 2px;
+  background: linear-gradient(90deg, transparent, #ff5a8a, transparent);
+  border-radius: 999px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+}
+
+/* Subtítulo */
+.tagline {
+  margin: 0 0 18px;
+  opacity: .92;
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+}
+
+/* Botões */
+.actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  border: 0; border-radius: 999px; padding: 10px 18px; font-weight: 700;
+  cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, opacity .2s;
+}
+.btn-primary {
+  background: #ff5a8a; color: #fff;
+  box-shadow: 0 8px 18px rgba(255,90,138,.35);
+}
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-secondary {
+  background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.18);
+}
+.btn-secondary:hover { opacity: .95; transform: translateY(-1px); }
+
+/* Mobile */
+@media (max-width: 420px) {
+  .glass { padding: 22px 18px; }
+}
