@@ -264,3 +264,14 @@ body::after {
   transition: transform .15s ease, background .15s ease;
 }
 .form-mask .btn-gray:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+
+.btn-pink {
+  background: linear-gradient(90deg, #d43f6b, #ff5a8a);
+  color: #fff;
+  border: none;
+}
+.btn-gray {
+  background: #6b7280;
+  color: #fff;
+  border: none;
+}

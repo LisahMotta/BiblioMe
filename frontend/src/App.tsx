@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import BookSuggestions, { BookSuggestionItem } from "./components/BookSuggestions";
+import BookSuggestions, { type BookSuggestionItem } from "./components/BookSuggestions";
+import { ApiDataStore } from "./dataStore";
+const dataStore = new ApiDataStore();
 
 const API_URL = "http://localhost:3000"; // ajuste a porta se necessário
 const HERO_BG = "https://SEU-LINK-DE-IMAGEM.jpg"; // ⬅️ Troque pela URL da sua imagem
@@ -55,7 +57,7 @@ function App() {
   // Estado para abrir/fechar sugestões e query
   const [bookQuery, setBookQuery] = useState("");
   const [openSuggestions, setOpenSuggestions] = useState(false);
-  const suggestionsRef = useRef<HTMLDivElement | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
 
   // ------------------ Wishlist: formulário ------------------
   const [wishlistForm, setWishlistForm] = useState({
@@ -68,7 +70,7 @@ function App() {
   // Estado para abrir/fechar sugestões e query
   const [bookQueryW, setBookQueryW] = useState("");
   const [openSuggestionsW, setOpenSuggestionsW] = useState(false);
-  const suggestionsRefW = useRef<HTMLDivElement | null>(null);
+  const suggestionsRefW = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
 
   // ------------------ Dados ------------------
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -85,6 +87,11 @@ function App() {
     fetchWishlist();
     fetchBiblioteca();
   }, []);
+
+useEffect(() => {
+  dataStore.getLivros().then(setBiblioteca);
+  dataStore.getWishlist().then(setWishlist);
+}, []);
 
   const fetchWishlist = async () => {
     setLoadingWishlist(true);
@@ -596,7 +603,7 @@ function App() {
         </section>
 
         {/* ------- Wishlist (form + lista + PDF) ------- */}
-        <section id="wishlist" className="w-full max-w-xl mx_auto mt-10">
+        <section id="wishlist" className="w-full max-w-xl mx-auto mt-10">
           <div className="flex items-center justify-between mb-3">
             <h2 className="titulo-section m-0">Wishlist</h2>
             <button className={BTN_SECONDARY} onClick={generateWishlistPDF}>
